@@ -25,6 +25,11 @@
   --f-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
 }
+:root[data-theme="light"] {
+  --bg: #eff2f5; --surface: #ffffff; --surface2: #e6ebf0; --line: #d1d9e1;
+  --fg: #111820; --muted: #566472; --faint: #b9c4cf;
+  --accent: #1b69ad; --accent-ink: #ffffff; --good: #1c8553; --good-ink: #ffffff; color-scheme: light;
+}
 * { box-sizing: border-box; }
 body { margin: 0; padding-inline: 16px; padding-block: 0 110px; background: var(--bg); color: var(--fg); font: 400 16px/1.4 var(--f-body); }
 .wrap { max-width: 560px; margin: 0 auto; }
@@ -33,6 +38,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px 0; }
+.hb { display: flex; gap: 8px; }
 .app { font: 700 21px var(--f-display); letter-spacing: .05em; text-transform: uppercase; }
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); padding-block: 10px; }
 .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -140,7 +146,7 @@ main { padding-block: 0; display: flex; flex-direction: column; gap: 10px; }
 
 
 <div class="wrap">
-  <div class="hdr"><span class="app">Gym List</span><button type="button" class="auto" id="auto" data-auto="1"></button></div>
+  <div class="hdr"><span class="app">Gym List</span><div class="hb"><button type="button" class="auto" id="theme" data-theme-toggle="1"></button><button type="button" class="auto" id="auto" data-auto="1"></button></div></div>
   <div class="top">
     <div class="days" id="days" role="group" aria-label="Day"></div>
   </div>
@@ -213,6 +219,7 @@ var S = { upd: 0, w: {}, c: {}, r: {}, log: {}, rest: 120, auto: true, start: to
 function fix() {
   if (S.auto === undefined) S.auto = true;
   if (!S.rest) S.rest = 120;
+  if (S.theme !== 'light') S.theme = 'dark';
   if (!S.start) S.start = today();
   if (!S.hist || typeof S.hist !== 'object') S.hist = {};
   if (!S.r || typeof S.r !== 'object') S.r = {};
@@ -271,7 +278,15 @@ function dockHTML() {
   return ring + '<div class="ringp' + (tm.done ? ' ok' : '') + '" role="timer" aria-label="Rest timer"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rg" cx="50" cy="50" r="42"/><circle class="rf" id="tbar" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg><div class="ctr"><div class="clock" id="clock">0:00</div></div></div>' +
     '<div class="sp"></div><button type="button" class="tbtn" data-tadd="1">+15</button><button type="button" class="tbtn" data-tstop="1">' + (tm.done ? 'Done' : 'Skip') + '</button>';
 }
-function paintAuto() { var b = $('#auto'); b.textContent = 'Auto-rest ' + (S.auto ? 'on' : 'off'); b.setAttribute('aria-pressed', String(!!S.auto)); }
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', S.theme);
+  try { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', S.theme === 'light' ? '#eff2f5' : '#0e1216'); } catch (e) {}
+}
+function paintAuto() {
+  var b = $('#auto'); b.textContent = 'Auto-rest ' + (S.auto ? 'on' : 'off'); b.setAttribute('aria-pressed', String(!!S.auto));
+  var t = $('#theme'); t.textContent = S.theme === 'light' ? 'Light' : 'Dark'; t.setAttribute('aria-label', 'Theme: ' + S.theme + '. Tap to switch.');
+  applyTheme();
+}
 function renderDock() {
   paintAuto();
   $('#navrow').innerHTML = dockHTML();
@@ -508,6 +523,7 @@ document.addEventListener('click', function (e) {
   if (d.start) { startRest(S.rest, 'Rest'); return; }
   if (d.tadd) { if (tm.done) startRest(15, 'Rest'); else { tm.end += 15000; tm.total += 15; paintClock(); } return; }
   if (d.tstop) { stopRest(); return; }
+  if (d.themeToggle) { S.theme = S.theme === 'light' ? 'dark' : 'light'; save(); paintAuto(); return; }
   if (d.auto) { S.auto = !S.auto; save(); paintAuto(); return; }
   if (d.ex) {
     var k = key(d.ex), i = +d.i, c = S.c[k] || (S.c[k] = []);
