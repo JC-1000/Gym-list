@@ -25,18 +25,6 @@
   --f-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #eff2f5; --surface: #ffffff; --surface2: #e6ebf0; --line: #d1d9e1;
-    --fg: #111820; --muted: #566472; --faint: #b9c4cf;
-    --accent: #1b69ad; --accent-ink: #ffffff; --good: #1c8553; --good-ink: #ffffff; color-scheme: light;
-  }
-}
-:root[data-theme="light"] {
-  --bg: #eff2f5; --surface: #ffffff; --surface2: #e6ebf0; --line: #d1d9e1;
-  --fg: #111820; --muted: #566472; --faint: #b9c4cf;
-  --accent: #1b69ad; --accent-ink: #ffffff; --good: #1c8553; --good-ink: #ffffff; color-scheme: light;
-}
 * { box-sizing: border-box; }
 body { margin: 0; padding-inline: 16px; padding-block: 0 110px; background: var(--bg); color: var(--fg); font: 400 16px/1.4 var(--f-body); }
 .wrap { max-width: 560px; margin: 0 auto; }
