@@ -386,11 +386,11 @@ var GRIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 12h14
 var editing = false, armed = false, snap = null, toastT = null;
 var CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 var TREND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>';
-var STANDALONE = !(window.claude && window.claude.use), bkMsg = '';
+var VERSION = 'v7', STANDALONE = !(window.claude && window.claude.use), bkMsg = '';
 function backupHTML() {
   if (!STANDALONE) return '';
   var n = 0; Object.keys(S.log).forEach(function (id) { n += Object.keys(S.log[id]).length; });
-  return '<div class="card"><h2>Backup</h2><p>' + n + ' sessions saved on this phone. Last backup: ' + (S.bk ? shortDate(S.bk) : 'never') + '. Export now and then so a lost phone doesn’t erase your history.</p>' +
+  return '<div class="card"><h2>Backup</h2><p>' + n + ' sessions saved on this phone. Last backup: ' + (S.bk ? shortDate(S.bk) : 'never') + '. Export now and then so a lost phone doesn’t erase your history.</p><p class="note">App version ' + VERSION + '</p>' +
     '<div class="bk"><button type="button" class="reset" data-exp="1">Export backup</button><label class="reset">Restore backup<input type="file" id="imp" accept="application/json,.json" hidden></label></div>' +
     (bkMsg ? '<p class="note">' + esc(bkMsg) + '</p>' : '') + '</div>';
 }
