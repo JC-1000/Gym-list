@@ -1,4 +1,4 @@
-const V = 'gym-list-v7';
+const V = 'gym-list-v8';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const IDX = () => new URL('index.html', self.registration.scope).href;
 
