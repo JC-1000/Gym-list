@@ -20,7 +20,7 @@
 :root {
   --bg: #0e1216; --surface: #161b21; --surface2: #1e252d; --line: #29323c;
   --fg: #eaeef2; --muted: #8b97a4; --faint: #3a4551;
-  --accent: #8ec1f0; --accent-ink: #0a1118; --good: #62c490; --good-ink: #0a1a12;
+  --accent: #8ec1f0; --accent-ink: #0a1118; --good: #62c490; --good-ink: #0a1a12; --bad: #ef7b76;
   --f-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
   --f-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
@@ -28,7 +28,7 @@
 :root[data-theme="light"] {
   --bg: #eff2f5; --surface: #ffffff; --surface2: #e6ebf0; --line: #d1d9e1;
   --fg: #111820; --muted: #566472; --faint: #b9c4cf;
-  --accent: #1b69ad; --accent-ink: #ffffff; --good: #1c8553; --good-ink: #ffffff; color-scheme: light;
+  --accent: #1b69ad; --accent-ink: #ffffff; --good: #1c8553; --good-ink: #ffffff; --bad: #c0392b; color-scheme: light;
 }
 * { box-sizing: border-box; }
 body { margin: 0; padding-inline: 16px; padding-block: 0 110px; background: var(--bg); color: var(--fg); font: 400 16px/1.4 var(--f-body); }
@@ -109,6 +109,29 @@ main { padding-block: 0; display: flex; flex-direction: column; gap: 10px; }
 .note { color: var(--muted); font-size: 15px; padding: 4px 2px 0; }
 .reset { align-self: flex-start; min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: none; font-size: 15px; color: var(--muted); }
 
+/* edit mode */
+.hrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.hrow .auto[hidden] { display: none; }
+.row.ed { grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; padding: 8px 12px 8px 4px; touch-action: pan-y; }
+.row.ed .main { grid-column: 2; grid-row: 1; }
+.grip { grid-column: 1; grid-row: 1; width: 44px; height: 56px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); touch-action: none; cursor: grab; }
+.grip svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.eb { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; gap: 6px; }
+.mini { min-height: 38px; min-width: 76px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: none; font: 600 14px var(--f-body); color: var(--fg); }
+.mini.bad { color: var(--bad); }
+.row.dragging { position: relative; z-index: 15; border-color: var(--accent); box-shadow: 0 10px 28px rgba(0, 0, 0, .45); background: var(--surface2); }
+.addbtn { min-height: 52px; border-radius: 12px; border: 2px dashed var(--accent); background: none; color: var(--accent); font: 700 17px var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+#toast { position: fixed; left: 16px; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 30; max-width: 528px; margin-inline: auto; background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; }
+#toast[hidden] { display: none; }
+#toast button { min-height: 40px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-ink); font: 700 15px var(--f-body); }
+#ed { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .66); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#ed[hidden] { display: none; }
+.fl { display: flex; flex-direction: column; gap: 6px; font: 600 13px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 0; flex: 1; }
+.fl input, .fl select { height: 46px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface2); color: var(--fg); font: 500 16px var(--f-body); padding: 0 12px; letter-spacing: 0; text-transform: none; width: 100%; }
+.fr { display: flex; gap: 10px; }
+.cancel { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--muted); font: 600 15px var(--f-body); }
+.err { color: var(--bad); font-size: 14px; min-height: 18px; }
+
 /* backup + range chips */
 .bk { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .bk label.reset { display: inline-flex; align-items: center; }
@@ -151,11 +174,27 @@ main { padding-block: 0; display: flex; flex-direction: column; gap: 10px; }
     <div class="days" id="days" role="group" aria-label="Day"></div>
   </div>
   <div class="head">
-    <span class="eyebrow" id="eyebrow"></span>
+    <div class="hrow"><span class="eyebrow" id="eyebrow"></span><button type="button" class="auto" id="editbtn" data-edit-toggle="1" hidden>Edit</button></div>
     <h1 id="dname"></h1>
     <p class="sub" id="dsub"></p>
   </div>
   <main id="list"></main>
+</div>
+
+<div id="toast" hidden><span id="toast-t"></span><button type="button" data-undo="1">Undo</button></div>
+
+<div id="ed" hidden role="dialog" aria-modal="true" aria-labelledby="ed-h">
+  <div class="card tsheet">
+    <h2 id="ed-h"></h2>
+    <label class="fl" id="ed-pickw">Pick one you've used<select id="ed-pick"></select></label>
+    <label class="fl">Name<input id="ed-name" type="text" autocomplete="off" maxlength="60"></label>
+    <div class="fr"><label class="fl">Sets<input id="ed-sets" type="text" inputmode="numeric" maxlength="2"></label><label class="fl">Reps<input id="ed-reps" type="text" placeholder="8–12" maxlength="14"></label></div>
+    <label class="fl">Rest<select id="ed-rest"><option value="150">Heavy · 2–3 min</option><option value="105">Medium · 90–120 sec</option><option value="75">Light · 60–90 sec</option></select></label>
+    <label class="fl">Muscles (optional)<input id="ed-mus" type="text" placeholder="Chest, Triceps" maxlength="60"></label>
+    <p class="err" id="ed-err"></p>
+    <button type="button" class="go" id="ed-save">Save</button>
+    <button type="button" class="cancel" id="ed-cancel">Cancel</button>
+  </div>
 </div>
 
 <div class="navrow" id="navrow"></div>
@@ -215,11 +254,12 @@ var dnum = function (s) { var p = s.split('-').map(Number); return Math.round(Da
 
 /* ---------- storage ---------- */
 var LS = 'gym-list-v1';
-var S = { upd: 0, w: {}, c: {}, r: {}, log: {}, rest: 120, auto: true, start: today(), hist: {} };
+var S = { upd: 0, w: {}, c: {}, r: {}, log: {}, plan: {}, lib: {}, mus: {}, rest: 120, auto: true, start: today(), hist: {} };
 function fix() {
   if (S.auto === undefined) S.auto = true;
   if (!S.rest) S.rest = 120;
   if (S.theme !== 'light') S.theme = 'dark';
+  ['plan', 'lib', 'mus'].forEach(function (k) { if (!S[k] || typeof S[k] !== 'object') S[k] = {}; });
   if (!S.start) S.start = today();
   if (!S.hist || typeof S.hist !== 'object') S.hist = {};
   if (!S.r || typeof S.r !== 'object') S.r = {};
@@ -260,11 +300,23 @@ function beep() {
   } catch (e) {}
   try { if (navigator.vibrate) navigator.vibrate([250, 120, 250, 120, 250]); } catch (e) {}
 }
+function exs(n) { var D = DAYS[n]; if (!D || !D.ex) return null; return (S.plan && S.plan[n]) || D.ex; }
+function restLabelOf(sec) { return sec === 150 ? '2–3 min' : sec === 105 ? '90–120 sec' : sec === 75 ? '60–90 sec' : mmss(sec); }
+function musOf(id) { return (S.mus && S.mus[id]) || MUS[id] || []; }
+function ensurePlan(n) { if (!S.plan[n]) S.plan[n] = JSON.parse(JSON.stringify(DAYS[n].ex)); return S.plan[n]; }
+function library() {
+  var m = {};
+  Object.keys(S.lib).forEach(function (id) { m[id] = S.lib[id]; });
+  Object.keys(P).forEach(function (k) { if (!m[P[k][0]]) m[P[k][0]] = P[k]; });
+  Object.keys(DAYS).forEach(function (n) { (exs(n) || []).forEach(function (e) { if (!m[e[0]]) m[e[0]] = e; }); });
+  return Object.keys(m).map(function (id) { return m[id]; }).sort(function (a, b) { return a[1].localeCompare(b[1]); });
+}
 function sessionRingHTML() {
-  var D = DAYS[sel];
-  if (D.ex) {
-    var sd = 0, st = 0, done = D.ex.filter(exDone).length; D.ex.forEach(function (e) { sd += setsDone(e); st += e[2]; });
-    return ringHTML(sd / st, done + '/' + D.ex.length, done === D.ex.length ? 'ok' : '', 'Session progress: ' + done + ' of ' + D.ex.length + ' exercises');
+  var D = DAYS[sel], L = exs(sel);
+  if (L) {
+    if (!L.length) return ringHTML(0, '0/0', '', 'No exercises');
+    var sd = 0, st = 0, done = L.filter(exDone).length; L.forEach(function (e) { sd += setsDone(e); st += e[2]; });
+    return ringHTML(sd / st, done + '/' + L.length, done === L.length ? 'ok' : '', 'Session progress: ' + done + ' of ' + L.length + ' exercises');
   }
   if (D.hiit) { var hc = !!(S.c[key('hiit')] || [])[0]; return ringHTML(hc ? 1 : 0, hc ? '✓' : '0/1', hc ? 'ok' : '', 'HIIT session'); }
   return '';
@@ -314,8 +366,8 @@ function key(id) { return today() + '|' + id; }
 function exDone(e) { var c = S.c[key(e[0])] || []; return c.length >= e[2] && c.slice(0, e[2]).every(Boolean); }
 function setsDone(e) { return (S.c[key(e[0])] || []).slice(0, e[2]).filter(Boolean).length; }
 function dayComplete(n) {
-  var D = DAYS[n];
-  if (D.ex) return D.ex.every(exDone);
+  var D = DAYS[n], L = exs(n);
+  if (L) return L.length > 0 && L.every(exDone);
   if (D.hiit) return !!(S.c[key('hiit')] || [])[0];
   return false;
 }
@@ -330,6 +382,8 @@ function ringHTML(frac, big, cls, label) {
   return '<div class="ringp ' + (cls || '') + '" role="img" aria-label="' + esc(label || '') + '"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rg" cx="50" cy="50" r="42"/><circle class="rf" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="' + (f * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1) + '"/></svg>' +
     '<div class="ctr">' + big + '</div></div>';
 }
+var GRIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
+var editing = false, armed = false, snap = null, toastT = null;
 var CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 var TREND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>';
 var STANDALONE = !(window.claude && window.claude.use), bkMsg = '';
@@ -363,6 +417,7 @@ function doImport(file) {
         Object.keys(o.log[id]).forEach(function (d) { if (!S.log[id][d]) { S.log[id][d] = o.log[id][d]; added++; } });
       });
       Object.keys(o.hist || {}).forEach(function (d) { if (!S.hist[d]) S.hist[d] = o.hist[d]; });
+      ['plan', 'lib', 'mus'].forEach(function (k) { Object.keys(o[k] || {}).forEach(function (x) { if (!S[k][x]) S[k][x] = o[k][x]; }); });
       if (o.start && o.start < S.start) S.start = o.start;
       fix(); save(); bkMsg = 'Restored. Added ' + added + ' sessions.';
     } catch (e) { bkMsg = 'That file isn’t a Gym List backup.'; }
@@ -382,19 +437,33 @@ function render() {
   $('#eyebrow').textContent = (sel === now ? 'Today · ' : '') + FULL[sel];
   $('#dname').textContent = D.n;
   $('#dsub').textContent = D.m || '';
-  var out = '';
-  if (D.ex) {
-    D.ex.forEach(function (e, i) {
+  var out = '', L = exs(sel);
+  armed = false;
+  $('#editbtn').hidden = !L; $('#editbtn').textContent = editing ? 'Done' : 'Edit';
+  if (L && editing) {
+    L.forEach(function (e, i) {
+      var tags = musOf(e[0]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
+      out += '<div class="row ed" data-i="' + i + '"><button type="button" class="grip" data-grip="' + i + '" aria-label="Reorder ' + esc(e[1]) + '. Drag, or use up and down arrow keys.">' + GRIP + '</button>' +
+        '<div class="main"><div class="nm">' + esc(e[1]) + '</div>' + (tags ? '<div class="tags">' + tags + '</div>' : '') + '<div class="sr">' + e[2] + ' × ' + esc(e[3]) + ' · ' + restLabelOf(e[4]) + '</div></div>' +
+        '<div class="eb"><button type="button" class="mini" data-edit-ex="' + i + '">Edit</button><button type="button" class="mini bad" data-del="' + i + '">Remove</button></div></div>';
+    });
+    if (!L.length) out += '<div class="card"><h2>No exercises</h2><p>Tap Add exercise to build this day.</p></div>';
+    out += '<button type="button" class="addbtn" data-add-ex="1">+ Add exercise</button>';
+    out += '<p class="note">Drag the ≡ handle to reorder. Changes only affect this day, and your logged history stays attached to each exercise.</p>';
+    if (S.plan[sel]) out += '<button type="button" class="reset" data-reset-day="1">Reset this day to the original plan</button>';
+  } else if (L) {
+    L.forEach(function (e, i) {
       var all = exDone(e), c = S.c[key(e[0])] || [], sets = '';
       for (var k = 0; k < e[2]; k++) sets += '<div class="sc"><button type="button" class="set" data-ex="' + e[0] + '" data-i="' + k + '" data-n="' + e[2] + '" aria-pressed="' + !!c[k] + '" aria-label="' + esc(e[1]) + ' set ' + (k + 1) + '">' + (k + 1) + '</button>' +
         '<input class="rp" type="text" inputmode="numeric" data-rp="' + e[0] + '" data-i="' + k + '" value="' + esc((S.r[key(e[0])] || [])[k] || '') + '" placeholder="reps" aria-label="' + esc(e[1]) + ' set ' + (k + 1) + ' reps"></div>';
-      var tags = (MUS[e[0]] || []).map(function (t) { return '<span class="tag">' + t + '</span>'; }).join('');
+      var tags = musOf(e[0]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
       out += '<div class="row' + (all ? ' done' : '') + '"><span class="ix">' + (i + 1) + '</span>' +
         '<div class="main"><div class="nm">' + esc(e[1]) + '</div>' + (tags ? '<div class="tags">' + tags + '</div>' : '') + '<div class="sr">' + e[2] + ' × ' + esc(e[3]) + '</div>' +
         '<div class="meta"><span class="pill m">' + CLOCK + 'Rest ' + e[5] + '</span><button type="button" class="trbtn" data-trend="' + e[0] + '">' + TREND + 'Trend</button></div></div>' +
         '<label class="wt"><input type="text" inputmode="decimal" data-w="' + e[0] + '" value="' + esc(S.w[e[0]] || '') + '" placeholder="–" aria-label="' + esc(e[1]) + ' weight in pounds"><span>lb</span></label>' +
         '<div class="sets">' + sets + '</div></div>';
     });
+    if (!L.length) out += '<div class="card"><h2>No exercises</h2><p>Tap Edit, then Add exercise.</p></div>';
     out += '<p class="note">Work most sets 1–2 reps short of failure. Hit the top of the rep range on every set, then add weight. Type your reps under each set to feed the Trend graph.</p>';
     out += '<button class="reset" type="button" data-reset="1">Clear today’s checks</button>';
   } else if (D.hiit) {
@@ -409,7 +478,104 @@ function render() {
   $('#list').innerHTML = out + backupHTML();
   renderDock();
 }
-function findEx(id) { var r = null; Object.keys(DAYS).forEach(function (n) { (DAYS[n].ex || []).forEach(function (e) { if (e[0] === id) r = e; }); }); return r; }
+function findEx(id) {
+  var r = null, cur = exs(sel) || [];
+  cur.forEach(function (e) { if (e[0] === id && !r) r = e; });
+  if (r) return r;
+  Object.keys(DAYS).forEach(function (n) { (exs(n) || []).forEach(function (e) { if (e[0] === id) r = e; }); });
+  if (!r && S.lib[id]) r = S.lib[id];
+  return r;
+}
+/* ---------- editing ---------- */
+function toast(msg) { $('#toast-t').textContent = msg; $('#toast').hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { $('#toast').hidden = true; }, 7000); }
+function snapshot() { snap = { day: sel, plan: S.plan[sel] ? JSON.parse(JSON.stringify(S.plan[sel])) : null }; }
+function moveItem(from, to) {
+  var L = exs(sel); if (!L || to < 0 || to >= L.length || from === to) return;
+  var arr = ensurePlan(sel), it = arr.splice(from, 1)[0]; arr.splice(to, 0, it); save(); render();
+}
+var edMode = '', edIdx = -1;
+function fillEd(e) {
+  $('#ed-name').value = e ? e[1] : ''; $('#ed-sets').value = e ? e[2] : '3'; $('#ed-reps').value = e ? e[3] : '8–12';
+  $('#ed-rest').value = String(e ? ([75, 105, 150].indexOf(e[4]) > -1 ? e[4] : 105) : 105);
+  $('#ed-mus').value = e ? musOf(e[0]).join(', ') : '';
+}
+function openEd(mode, idx) {
+  edMode = mode; edIdx = idx; $('#ed-err').textContent = '';
+  var L = exs(sel) || [];
+  if (mode === 'edit') {
+    $('#ed-h').textContent = 'Edit exercise'; $('#ed-pickw').hidden = true; fillEd(L[idx]);
+  } else {
+    $('#ed-h').textContent = 'Add exercise'; $('#ed-pickw').hidden = false;
+    var have = {}; L.forEach(function (e) { have[e[0]] = 1; });
+    var sp = $('#ed-pick'); sp.innerHTML = '<option value="">New exercise</option>';
+    library().forEach(function (e) { if (!have[e[0]]) { var o = document.createElement('option'); o.value = e[0]; o.textContent = e[1]; sp.appendChild(o); } });
+    sp.value = ''; fillEd(null);
+  }
+  $('#ed').hidden = false; $('#ed-name').focus();
+}
+function closeEd() { $('#ed').hidden = true; }
+function saveEd() {
+  var name = $('#ed-name').value.trim(), sets = parseInt($('#ed-sets').value, 10), reps = $('#ed-reps').value.trim().replace(/(\d)\s*-\s*(\d)/g, '$1–$2'), rest = +$('#ed-rest').value;
+  if (!name) { $('#ed-err').textContent = 'Give it a name.'; return; }
+  if (!(sets >= 1 && sets <= 10)) { $('#ed-err').textContent = 'Sets must be 1 to 10.'; return; }
+  if (!reps) reps = '8–12';
+  var arr = ensurePlan(sel), id, mus = $('#ed-mus').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean).slice(0, 4);
+  if (edMode === 'edit') { id = arr[edIdx][0]; arr[edIdx] = [id, name, sets, reps, rest, restLabelOf(rest)]; }
+  else { id = $('#ed-pick').value || ('x' + Date.now().toString(36)); arr.push([id, name, sets, reps, rest, restLabelOf(rest)]); }
+  S.lib[id] = [id, name, sets, reps, rest, restLabelOf(rest)];
+  if (mus.length) S.mus[id] = mus; else delete S.mus[id];
+  save(); closeEd(); render();
+}
+$('#ed-save').addEventListener('click', saveEd);
+$('#ed-cancel').addEventListener('click', closeEd);
+$('#ed').addEventListener('click', function (e) { if (e.target === $('#ed')) closeEd(); });
+$('#ed-pick').addEventListener('change', function () { var id = this.value, m = library().filter(function (e) { return e[0] === id; })[0]; fillEd(m || null); });
+
+/* drag to reorder */
+var drag = null;
+function dragPlace() {
+  var r = drag.row, list = $('#list');
+  r.style.transform = 'none';
+  var natural = r.getBoundingClientRect().top, ty = drag.y - drag.grab - natural;
+  r.style.transform = 'translateY(' + ty + 'px)';
+  var center = natural + ty + r.offsetHeight / 2, nx = r.nextElementSibling, pv = r.previousElementSibling;
+  if (nx && nx.classList.contains('ed')) { var nb = nx.getBoundingClientRect(); if (center > nb.top + nb.height / 2) { list.insertBefore(nx, r); dragPlace(); return; } }
+  if (pv && pv.classList.contains('ed')) { var pb = pv.getBoundingClientRect(); if (center < pb.top + pb.height / 2) { list.insertBefore(r, pv); dragPlace(); return; } }
+}
+function dragLoop() {
+  if (!drag) return;
+  var step = 0, h = window.innerHeight;
+  if (drag.y < 110) step = -Math.ceil((110 - drag.y) / 6);
+  else if (drag.y > h - 170) step = Math.ceil((drag.y - (h - 170)) / 6);
+  if (step) { window.scrollBy(0, step); dragPlace(); }
+  drag.raf = requestAnimationFrame(dragLoop);
+}
+function dragMove(e) { if (drag && e.pointerId === drag.pid) { e.preventDefault(); drag.y = e.clientY; dragPlace(); } }
+function dragEnd(e) {
+  if (!drag || (e && e.pointerId !== drag.pid)) return;
+  cancelAnimationFrame(drag.raf);
+  window.removeEventListener('pointermove', dragMove); window.removeEventListener('pointerup', dragEnd); window.removeEventListener('pointercancel', dragEnd);
+  var r = drag.row; r.style.transform = ''; r.classList.remove('dragging'); drag = null;
+  var order = Array.prototype.map.call($('#list').querySelectorAll('.row.ed'), function (x) { return +x.dataset.i; });
+  var changed = order.some(function (v, i) { return v !== i; });
+  if (changed) { var cur = ensurePlan(sel).slice(); S.plan[sel] = order.map(function (i) { return cur[i]; }); save(); }
+  render();
+}
+document.addEventListener('pointerdown', function (e) {
+  var g = e.target.closest && e.target.closest('.grip'); if (!g || drag) return;
+  var row = g.closest('.row'); e.preventDefault();
+  drag = { row: row, pid: e.pointerId, y: e.clientY, grab: e.clientY - row.getBoundingClientRect().top, raf: 0 };
+  row.classList.add('dragging');
+  try { g.setPointerCapture(e.pointerId); } catch (x) {}
+  window.addEventListener('pointermove', dragMove, { passive: false }); window.addEventListener('pointerup', dragEnd); window.addEventListener('pointercancel', dragEnd);
+  dragLoop();
+});
+document.addEventListener('keydown', function (e) {
+  var g = e.target.closest && e.target.closest('.grip'); if (!g || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); var i = +g.dataset.grip, to = i + (e.key === 'ArrowUp' ? -1 : 1);
+  moveItem(i, to);
+  var ng = document.querySelector('[data-grip="' + Math.max(0, Math.min(to, (exs(sel) || []).length - 1)) + '"]'); if (ng) ng.focus();
+});
 
 /* ---------- rep log + trend ---------- */
 function commit(id) {
@@ -508,13 +674,19 @@ function openTrend(id) {
 }
 $('#tr-go').addEventListener('click', function () { $('#trend').hidden = true; });
 $('#trend').addEventListener('click', function (e) { if (e.target === $('#trend')) $('#trend').hidden = true; });
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('#trend').hidden = true; });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('#trend').hidden = true; closeEd(); } });
 
 document.addEventListener('click', function (e) {
   var b = e.target.closest('button');
   if (!b) return;
   var d = b.dataset;
-  if (d.day !== undefined) { sel = +d.day; render(); return; }
+  if (d.day !== undefined) { sel = +d.day; editing = false; render(); return; }
+  if (d.editToggle) { editing = !editing; render(); return; }
+  if (d.editEx !== undefined) { openEd('edit', +d.editEx); return; }
+  if (d.addEx) { openEd('add', -1); return; }
+  if (d.del !== undefined) { var L0 = exs(sel), nm = L0[+d.del][1]; snapshot(); ensurePlan(sel).splice(+d.del, 1); save(); render(); toast('Removed ' + nm); return; }
+  if (d.undo) { if (snap) { if (snap.plan) S.plan[snap.day] = snap.plan; else delete S.plan[snap.day]; snap = null; save(); render(); } $('#toast').hidden = true; return; }
+  if (d.resetDay) { if (!armed) { armed = true; b.textContent = 'Tap again to reset this day'; return; } snapshot(); delete S.plan[sel]; save(); render(); toast('Day reset to the original plan'); return; }
   if (d.trend) { openTrend(d.trend); return; }
   if (d.rng) { trRange = d.rng; openTrend(trId); return; }
   if (d.exp) { doExport(); return; }
